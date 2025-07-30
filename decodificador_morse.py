@@ -26,6 +26,7 @@ print(f"Tasa de muestreo: {sample_rate} Hz")
 print(f"Forma del array de datos: {data.shape}")
 print(f"Tipo de datos: {data.dtype}")
 print(f'Duración: {duracion}s')
+print()
 
 # Definimos una función para normalizar la codificación a float32.
 def normalizar_codificacion(data):
@@ -83,6 +84,10 @@ plt.show()
 
 # ANÁLISIS DE SEGMENTOS.
 
+# Introducimos un indicador de inicio y final de pista (un valor elevado al final
+# segudo de 0)
+indicador = np.array([0.999, 0])
+data = np.concatenate((data, indicador))
 # Calculamos la amplitud absoluta y establecemos un umbral de sonido.
 amplitud = np.abs(data)
 umbral = 0.2
@@ -111,11 +116,18 @@ if inicios[0] < finales[0]:
     
 # Recorremos la lista de pulsos. Si la distancia entre el final de uno y el 
 # comienzo de otro es pequeña, los fusionamos.
-swich = True
-
+contador = 0
+print()
 for i in range(len(pulsos)-1):
     pulso_actual = pulsos[i]
-    pulso_siguiente = pulsos[i+1]
+    pulso_siguiente = pulsos[i + 1]
+    inicio_pulso = 0
+    fin_pulso = 0
     
-    if (pulso_siguiente[0] - pulso_actual[1]) > 10:
-        print(f'posible salto de pulso entre {pulso_actual} y {pulso_siguiente}')
+    
+    if (pulso_siguiente[0] - pulso_actual[1]) > 15:
+        contador += 1
+        tiempo_salto = 1/(sample_rate/pulso_actual[1])
+        print(f'posible fin de pulso entre {pulso_actual} y {pulso_siguiente} en segundo {tiempo_salto}')
+print()
+print(f' {contador} pulsos')
