@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 # muestras de audio.
 # Los Hz indican cuantos valores hay por segundo.
 # Cada valor del array indica la amplitud de la onda en ese instante de tiempo.
-ruta_archivo = r'D:\OneDrive\Universidad\Máster Bioinformática\Proyectos personales\8. Decodificador Morse\morse-SOS-20wpm-600hz.wav'
+ruta_archivo = r'D:\OneDrive\Universidad\Máster Bioinformática\Proyectos personales\8. Decodificador Morse\audio-morse-DOS PALABRAS.wav'
 sample_rate, data = wavfile.read(ruta_archivo)
 # Análisis inicial:
 duracion = round(1/(sample_rate/len(data)), 4)
@@ -37,8 +37,8 @@ def normalizar_codificacion(data):
         # float32: punto flotante entre -1.0 y 1.0.
     # Comenzamos fusionando las pistas stereo en mono.
     if len(data.shape) == 2 and data.shape[1] == 2:
-        print('STEREO DETECTED. FUSING TO MONO.')
-        data = data.mean(axis=1)
+        print('STEREO DETECTED. L CHANNEL SELECTED.')
+        data = data[:, 0]
     else:
         print('MONO DETECTED.')
 
@@ -113,21 +113,63 @@ if inicios[0] < finales[0]:
     for pulso in pulsos:
         if pulso[0] > pulso[1]:
             print('ERROR EN EL ORDEN DE TUPLA PULSO')
-    
+ 
 # Recorremos la lista de pulsos. Si la distancia entre el final de uno y el 
 # comienzo de otro es pequeña, los fusionamos.
 contador = 0
-print()
+silencio_intratono = 15
+nuevo_pulso = [None, None]
+pulsos_limpios = []
 for i in range(len(pulsos)-1):
-    pulso_actual = pulsos[i]
-    pulso_siguiente = pulsos[i + 1]
-    inicio_pulso = 0
-    fin_pulso = 0
+    inicio_pulso_actual = pulsos[i][0]
+    inicio_pulso_siguiente = pulsos[i + 1][0]
     
+    fin_pulso_actual = pulsos[i][1]
+    fin_pulso_siguiente = pulsos[i + 1][1]
     
-    if (pulso_siguiente[0] - pulso_actual[1]) > 15:
-        contador += 1
-        tiempo_salto = 1/(sample_rate/pulso_actual[1])
-        print(f'posible fin de pulso entre {pulso_actual} y {pulso_siguiente} en segundo {tiempo_salto}')
+    # Si la diferencia entre un pulso y el siguient es muy pequeña
+    if (inicio_pulso_siguiente - fin_pulso_actual) < silencio_intratono:
+        # y si no hay un nuevo pulso en construcción
+        if nuevo_pulso[0] is None:
+            # El nuevo pulso es el inicio del primero y el fin del segundo.
+            nuevo_pulso[0] = inicio_pulso_actual
+            nuevo_pulso[1] = fin_pulso_siguiente
+        # Pero si hay un nuevo pulso en construcción:    
+        else:
+            # Solo actualizamos el final del pulso.
+            nuevo_pulso[1] = fin_pulso_siguiente
+    # Si la diferencia entre un pulso y el siguiente es grande
+    elif (inicio_pulso_siguiente - fin_pulso_actual) > silencio_intratono:
+        # Si hay un pulso en construcción:
+        if nuevo_pulso[0] is not None:
+            # Introducimos el nuevo pulso en la lista buena y lo reseteamos.
+            pulsos_limpios.append(nuevo_pulso)
+            contador += 1
+            nuevo_pulso = [None, None]
+
+print(f' {contador} pulsos')            
+print(pulsos_limpios)
 print()
-print(f' {contador} pulsos')
+
+# Creamos una lista con tuplas (longitud, tipo) que intercala los sonidos con
+# las pausas indicando la duración de cada uno para diferenciar entre 
+# sonidos cortos y largos y pausas intra-letra, inter-letra y inter-palabra.
+codigo = []
+
+for index in range(len(pulsos_limpios)):
+    pulso = pulsos_limpios[index]
+    duracion_pulso = pulso[1] - pulso[0]
+    codigo.append((duracion_pulso, 'pulso'))
+
+    # Añadimos pausa si existe un siguiente pulso
+    if index < len(pulsos_limpios) - 1:
+        pulso_siguiente = pulsos_limpios[index + 1]
+        duracion_pausa = pulso_siguiente[0] - pulso[1]
+        codigo.append((duracion_pausa, 'pausa'))
+
+
+print(codigo)
+        
+            
+        
+    
