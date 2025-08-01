@@ -12,12 +12,13 @@ data.shape indica cuántas muestras hay y si sólo hay un canal (mono) o varios.
 from scipy.io import wavfile
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import Counter
 
 # wavfile devuelve una tupla con los Hz de la pista y un array Numpy con las
 # muestras de audio.
 # Los Hz indican cuantos valores hay por segundo.
 # Cada valor del array indica la amplitud de la onda en ese instante de tiempo.
-ruta_archivo = r'D:\OneDrive\Universidad\Máster Bioinformática\Proyectos personales\8. Decodificador Morse\audio-morse-DOS PALABRAS.wav'
+ruta_archivo = r'D:\OneDrive\Universidad\Máster Bioinformática\Proyectos personales\8. Decodificador Morse\audio-morse-PACO ESTEVE.wav'
 sample_rate, data = wavfile.read(ruta_archivo)
 # Análisis inicial:
 duracion = round(1/(sample_rate/len(data)), 4)
@@ -113,11 +114,11 @@ if inicios[0] < finales[0]:
     for pulso in pulsos:
         if pulso[0] > pulso[1]:
             print('ERROR EN EL ORDEN DE TUPLA PULSO')
- 
+print(pulsos[:20])
 # Recorremos la lista de pulsos. Si la distancia entre el final de uno y el 
 # comienzo de otro es pequeña, los fusionamos.
 contador = 0
-silencio_intratono = 15
+silencio_intratono = 30
 nuevo_pulso = [None, None]
 pulsos_limpios = []
 for i in range(len(pulsos)-1):
@@ -148,7 +149,6 @@ for i in range(len(pulsos)-1):
             nuevo_pulso = [None, None]
 
 print(f' {contador} pulsos')            
-print(pulsos_limpios)
 print()
 
 # Creamos una lista con tuplas (longitud, tipo) que intercala los sonidos con
@@ -165,11 +165,107 @@ for index in range(len(pulsos_limpios)):
     if index < len(pulsos_limpios) - 1:
         pulso_siguiente = pulsos_limpios[index + 1]
         duracion_pausa = pulso_siguiente[0] - pulso[1]
-        codigo.append((duracion_pausa, 'pausa'))
+        codigo.append((duracion_pausa, 'silencio'))
 
 
-print(codigo)
-        
-            
-        
+max_pulso = max([x[0] for x in codigo if x[1] == "pulso"])
+min_pulso = min([x[0] for x in codigo if x[1] == "pulso"])
+
+max_silencio = max([x[0] for x in codigo if x[1] == "silencio"])
+min_silencio = min([x[0] for x in codigo if x[1] == "silencio"])
+
+
+
+# Clasificación en corta, media o larga
+clasificadas = []
+for valor, etiqueta in codigo:
+    if etiqueta == 'pulso':
+        if abs(valor - min_pulso) < (min_pulso/10):
+            clasificacion = 'Pulso corto'
+        else:
+            clasificacion = 'Pulso largo'
+        clasificadas.append([valor, clasificacion])
     
+    else:
+        if abs(valor - min_silencio) < (min_silencio/10):
+            clasificacion = 'Silencio corto'
+        elif abs(valor - max_silencio) < (max_silencio/10):
+            clasificacion = 'Silencio largo'
+        else:
+            clasificacion = 'Silencio medio'
+        clasificadas.append([valor, clasificacion])
+
+# Si solo tenemos una palabra, los espacios inter-letra se interpretan como
+# inter- palabra. Lo corregimos tal que: si no hay "Silencios medios", los
+# silencios largos se sustituyen por silencios medios.
+hay_medios = any(x[1] == "Silencio medio" for x in clasificadas)
+
+if not hay_medios:
+    print('JUST ONE WORD DETECTED.')
+    clasificadas = [[x[0], "Silencio medio" if x[1] == "Silencio largo" else x[1]] for x in clasificadas]
+
+for n in clasificadas:
+    print(n)
+    print()
+        
+print(Counter(codigo))    
+print()
+
+# Transformación de pulsos a morse escrito.
+letra = ''
+palabra = ''
+mensaje = ''
+for n in clasificadas:
+    tipo = n[1]
+    
+    if tipo == 'Pulso corto':
+        letra += '.'
+    elif tipo == 'Pulso largo':
+        letra += '-'
+    elif tipo == 'Silencio medio':
+        if letra:
+            letra += ' '
+            palabra += letra
+            letra = ''
+    elif tipo == 'Silencio largo':
+        if letra:
+            letra += ' '
+            palabra += letra
+            letra = ''
+        if palabra:
+            mensaje += palabra + ' / '
+            palabra = ''
+if letra:
+    palabra += letra
+if palabra:
+    mensaje += palabra
+    
+# Transformamos el mensaje en una lista de palabras separadas por espacios.
+mensaje = mensaje.split("  / ")    
+
+# Diccionario morse clave símbolos morse, valor letra latina.
+morse_to_char = {
+    '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', 
+    '..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J', 
+    '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O', 
+    '.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T', 
+    '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y', 
+    '--..': 'Z', '..-..': 'É', '-----': '0', '.----': '1', 
+    '..---': '2', '...--': '3', '....-': '4', '.....': '5', 
+    '-....': '6', '--...': '7', '---..': '8', '----.': '9', 
+    '.-.-.-': '.', '--..--': ',', '..--..': '?', '-.-.--': '!', 
+    '-....-': '-', '-..-.': '/', '.--.-.': '@', '-.--.': '(', 
+    '-.--.-': ')'
+}
+
+traduccion = ''
+for palabra in mensaje:
+    letras = palabra.split(' ')
+    for letra in letras:
+        if letra in morse_to_char:
+            traduccion += morse_to_char[letra]
+        else:
+            traduccion += '#'
+    traduccion += ' '
+    
+print(traduccion)
