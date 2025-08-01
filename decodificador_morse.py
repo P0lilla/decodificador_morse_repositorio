@@ -85,7 +85,7 @@ plt.show()
 
 # ANÁLISIS DE SEGMENTOS.
 
-# Introducimos un indicador de inicio y final de pista (un valor elevado al final
+# Introducimos un indicador de final de pista (un valor elevado al final
 # segudo de 0)
 indicador = np.array([0.999, 0])
 data = np.concatenate((data, indicador))
