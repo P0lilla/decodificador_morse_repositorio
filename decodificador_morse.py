@@ -18,7 +18,7 @@ from collections import Counter
 # muestras de audio.
 # Los Hz indican cuantos valores hay por segundo.
 # Cada valor del array indica la amplitud de la onda en ese instante de tiempo.
-ruta_archivo = r'D:\OneDrive\Universidad\Máster Bioinformática\Proyectos personales\8. Decodificador Morse\audio-morse-PACO ESTEVE.wav'
+ruta_archivo = r'D:\OneDrive\Universidad\Máster Bioinformática\Proyectos personales\8. Decodificador Morse\morse.wav'
 sample_rate, data = wavfile.read(ruta_archivo)
 # Análisis inicial:
 duracion = round(1/(sample_rate/len(data)), 4)
@@ -114,7 +114,7 @@ if inicios[0] < finales[0]:
     for pulso in pulsos:
         if pulso[0] > pulso[1]:
             print('ERROR EN EL ORDEN DE TUPLA PULSO')
-print(pulsos[:20])
+
 # Recorremos la lista de pulsos. Si la distancia entre el final de uno y el 
 # comienzo de otro es pequeña, los fusionamos.
 contador = 0
@@ -147,8 +147,12 @@ for i in range(len(pulsos)-1):
             pulsos_limpios.append(nuevo_pulso)
             contador += 1
             nuevo_pulso = [None, None]
+# Si se ha quedado un último pulso pendiente, lo metemos también.
+if nuevo_pulso[0] is not None:
+    pulsos_limpios.append(nuevo_pulso)
+    contador += 1
 
-print(f' {contador} pulsos')            
+print(f'Detectados {contador} pulsos')            
 print()
 
 # Creamos una lista con tuplas (longitud, tipo) que intercala los sonidos con
@@ -204,9 +208,6 @@ if not hay_medios:
     print('JUST ONE WORD DETECTED.')
     clasificadas = [[x[0], "Silencio medio" if x[1] == "Silencio largo" else x[1]] for x in clasificadas]
 
-for n in clasificadas:
-    print(n)
-    print()
         
 print(Counter(codigo))    
 print()
